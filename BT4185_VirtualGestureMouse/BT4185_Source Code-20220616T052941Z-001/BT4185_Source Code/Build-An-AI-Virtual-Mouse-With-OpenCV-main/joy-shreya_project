@@ -1,0 +1,113 @@
+print("------------------------------CHOTA BHEEM CHARACTERS DATA BASE RECORDS-------------------------------")
+
+print("-------------------------------------CREATED BY - DEEPAK KUMAR---------------------------------------")
+
+
+
+conn=sq.connect(host="localhost",user="root",passwd="",database="sq")
+cursor=conn.cursor()
+def insert():
+    name=input("Enter your name:")
+    phone=input("Enter your phone")
+    age=input('Enter age')
+    sql="insert into onkar (name,phone) values(%s,%s)"
+    val=(name,phone,age)
+    try:
+        cursor.execute(sql,val)
+        conn.commit()
+        print("Successful")
+        menu()
+    except exception as e: 
+        print(e)
+        menu()
+def read():
+    sql="select * from sq"
+    try:
+        cursor.execute(sql)
+        data=cursor.fetchall()
+        for x in data:
+            print(x)
+        print("successful")
+        menu()
+    except:
+        print("Error occured")
+        menu()
+def delete():
+    ch=input("Do u have row id?(y/n)").lower()
+    if(ch=='y'):
+        idd=input("Enter your row id")
+        sql="delete from sq where id=%s"
+        val=(idd,)
+        try:
+            cursor.execute(sql,val)
+            conn.commit()
+            print("Successful")
+            menu()
+        except:
+            print("Error")
+            menu()
+    else:
+        print("Go to read section and get your id")
+        menu()
+        #
+
+        
+def update(): 
+    ch=input("Do u have row id?(y/n)").lower()
+    if(ch=='y'):
+        idd=input("Enter your row id")
+        sql="select * from sq where id=%s"
+        val=(idd,)
+        try:
+            cursor.execute(sql,val)
+            data=cursor.fetchall()
+            for x in data:
+                name=x[1]
+                phone=x[2]
+            print("1.update phone\n2.update name\n2.update age")
+            ch=int(input("Enter your choice"))
+            if(ch==1):
+                phone=input("Enter your value")
+            elif(ch==2):
+                name=input("Enter your new name")
+            elif(ch==3):
+                name=input("Enter age")
+            else:
+                print("wrong input")
+                menu()
+            sql="update sq set name=%s,phone=%s,age=%s where id=%s"
+            val=(name,phone,age,idd)
+            try:
+                cursor.execute(sql,val)
+                conn.commit()
+                print("Successful")
+                menu()
+            except exception as e:
+                print("error")
+                menu()
+        except exception as e:
+            print(e)
+            menu()
+
+        
+        #
+def menu():
+    
+    print ("PRESS 1 to insert new user") 
+    print ("PRESS 2 to display all user")
+    print ("PRESS 3 to delete user")
+    print ("PRESS 4 to update user")
+    print ("PRESS 5 to exit program")
+    ch=int(input("Enter your choice:\n\n"))
+    if(ch==1):
+        insert()
+    elif(ch==2):
+        read()
+    elif(ch==3):
+        update()
+    elif(ch==4):
+        delete()
+    else:
+        print("Wrong input choosn")
+        menu()
+menu()

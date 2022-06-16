@@ -1,0 +1,157 @@
+#Changing working directory
+import os
+print(os.getcwd())
+import warnings
+warnings.filterwarnings('ignore')
+
+from IPython.display import Image
+Image(filename='Capture.png')
+
+# Data and package Import
+#Data Source - Kaggle - https://www.kaggle.com/rohanrao/nifty50-stock-market-data
+import pandas as pd
+import matplotlib.pyplot as plt
+from statsmodels.tsa.arima_model import ARMA
+TempData = pd.read_csv('TCSTECH.csv')
+TempData.head(30)
+
+#Data Cleaning
+TCSTechStockData = TempData.dropna()
+
+
+TCSTechStockData.index = pd.to_datetime(TCSTechStockData.Date)
+  
+TCSTechStockData = TCSTechStockData["Prev Close"]['2020-01-01':'2020-11-27']
+TCSTechStockData.describe()
+
+#Data Exploration
+plt.figure(figsize=(16,7))
+fig = plt.figure(1)
+ax1 = fig.add_subplot(111)
+ax1.set_xlabel('Time Frame')
+ax1.set_ylabel('Stock Price for TCSTECH')
+ax1.plot(TCSTechStockData)
+
+#Determing rolling statistics
+rolLmean = TCSTechStockData.rolling(12).mean()
+rolLstd = TCSTechStockData.rolling(12).std()
+
+plt.figure(figsize=(16,7))
+fig = plt.figure(1)
+
+#Plot rolling statistics:
+orig = plt.plot(TCSTechStockData, color='blue',label='Original')
+mean = plt.plot(rolLmean, color='red', label='Rolling Mean')
+std = plt.plot(rolLstd, color='black', label = 'Rolling Std')
+plt.legend(loc='best')
+plt.title('Rolling Mean & Standard Deviation')
+plt.show(block=False)
+
+#Lets try transformation
+plt.figure(figsize=(16,7))
+fig = plt.figure(1)
+
+import numpy as np
+ts_log = np.log(TCSTechStockData)
+plt.plot(ts_log)
+
+#Decomposition
+from statsmodels.tsa.seasonal import seasonal_decompose
+decomposition = seasonal_decompose(ts_log,freq=1,model = 'multiplicative')
+
+trend = decomposition.trend
+seasonal = decomposition.seasonal
+residual = decomposition.resid
+
+plt.figure(figsize=(16,7))
+fig = plt.figure(1)
+
+plt.subplot(411)
+plt.plot(ts_log, label='Original')
+plt.legend(loc='best')
+plt.subplot(412)
+plt.plot(trend, label='Trend')
+plt.legend(loc='best')
+plt.subplot(413)
+plt.plot(seasonal,label='Seasonality')
+plt.legend(loc='best')
+plt.subplot(414)
+plt.plot(residual, label='Residuals')
+plt.legend(loc='best')
+
+#Lets try differencing
+plt.figure(figsize=(16,7))
+fig = plt.figure(1)
+ts_log_diff = ts_log - ts_log.shift()
+plt.plot(ts_log_diff)
+
+#Determing rolling statistics
+rolLmean = ts_log_diff.rolling(12).mean()
+rolLstd = ts_log_diff.rolling(12).std()
+
+
+
+
+#Plot rolling statistics:
+orig = plt.plot(ts_log_diff, color='blue',label='Original')
+mean = plt.plot(rolLmean, color='red', label='Rolling Mean')
+std = plt.plot(rolLstd, color='black', label = 'Rolling Std')
+plt.legend(loc='best')
+plt.title('Rolling Mean & Standard Deviation')
+plt.show(block=False)
+
+TCSTechStockData.sort_index(inplace= True)
+
+from statsmodels.tsa.stattools import acf, pacf
+lag_acf = acf(ts_log_diff, nlags=20)
+lag_pacf = pacf(ts_log_diff, nlags=20)
+
+import statsmodels.api as sm
+fig = plt.figure(figsize=(12,8))
+ax1 = fig.add_subplot(211)
+fig = sm.graphics.tsa.plot_acf(ts_log_diff.dropna(),lags=40,ax=ax1)
+ax2 = fig.add_subplot(212)
+fig = sm.graphics.tsa.plot_pacf(ts_log_diff.dropna(),lags=40,ax=ax2)
+
+from statsmodels.tsa.arima_model import ARIMA
+
+#ts_log_diff.dropna()
+ts_log_diff = ts_log_diff[~ts_log_diff.isnull()]
+
+plt.figure(figsize=(16,8))
+#ts_log_diff.dropna(inplace=True)
+model = ARIMA(ts_log_diff, order=(2,1,2))  
+results_ARIMA = model.fit()  
+plt.plot(ts_log_diff)
+plt.plot(results_ARIMA.fittedvalues, color='red')
+
+ARIMA_diff_predictions = pd.Series(results_ARIMA.fittedvalues, copy=True)
+print(ARIMA_diff_predictions.head())
+
+ARIMA_diff_predictions_cumsum = ARIMA_diff_predictions.cumsum()
+print(ARIMA_diff_predictions_cumsum.head())
+
+ARIMA_log_prediction = pd.Series(ts_log.iloc[0], index=ts_log.index)
+ARIMA_log_prediction = ARIMA_log_prediction.add(ARIMA_diff_predictions_cumsum,fill_value=0)
+ARIMA_log_prediction.head()
+
+plt.figure(figsize=(12,8))
+predictions_ARIMA = np.exp(ARIMA_log_prediction)
+plt.plot(TCSTechStockData)
+plt.plot(predictions_ARIMA)
+plt.title('RMSE: %.4f'% np.sqrt(sum((predictions_ARIMA-TCSTechStockData)**2)/len(TCSTechStockData)))
+
+results_ARIMA.predict(10,20)
+
+import pmdarima as pm
+def arimamodel(timeseries):
+    automodel = pm.auto_arima(timeseries, 
+                              start_p=3, 
+                              start_q=3,
+                              max_p=5,
+                              max_q=5,
+                              test="adf",
+                              seasonal=True,
+                              trace=True)
+    return automodel
+
